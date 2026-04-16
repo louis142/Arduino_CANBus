@@ -24,9 +24,15 @@ class CANLib {
   public:
     CANLib(MCP2515& canbus);
     void SetLED(const int& Target, const int& LED, const bool& Status);
-    void SetMultLED();
-    void SetFan();
+    void SetMultLED(const int& Target, const uint8_t& LEDBank0, const uint8_t& LEDBank1);
+    void SetFan(const int& Target, const int& Speed);
     void SendHB();
-    void MessageCheck();
+    void MessageCheck(struct can_frame& canRecv);
+
+    void PrintBP(const int& Sender, const int& Button);
+    void PrintLS(const int& Sender, const int& Button);
+    void PrintFS(const int& Sender, const uint16_t& FanSpeed);
+    void PrintT(const int& Sender, const uint16_t& Temp1, const uint16_t& Temp2);
+    void PrintHB(const int& Sender, const uint16_t& Heartbeats);
 };
 #endif
