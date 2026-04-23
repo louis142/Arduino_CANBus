@@ -1,7 +1,6 @@
 #include "CANLib.h"
 
-CANLib::CANLib(MCP2515& canbus)
-  : _canbus(canbus) {}
+CANLib::CANLib(MCP2515& canbus) : _canbus(canbus) {}
 
 void CANLib::SetLED(const int& Target, const int& LED, const bool& Status) {
   struct can_frame canSend;
@@ -79,10 +78,10 @@ void CANLib::SendHB() {
   canSend.data[6] = 0x00;               // ~
   canSend.data[7] = 0x00;               // ~
   if (_send(canSend)) {
-    // Serial.print("Heartbeat #");
-    // Serial.print(hbCount);
-    // Serial.print(" sent!");
-    // Serial.println();
+    Serial.print("Heartbeat #");
+    Serial.print(hbCount);
+    Serial.print(" sent!");
+    Serial.println();
     hbCount++;
   }
 }
@@ -156,7 +155,7 @@ void CANLib::PrintBP(const int& Sender, const int& Button) {
   Serial.print(" has been pressed");
   Serial.println();
 }
-void CANLib::PrintLS(const int& Sender, const int& Button) {
+void CANLib::PrintLS(const int& Sender, const int& Button){ 
   Serial.print("Recieved CAN from node #");
   Serial.print(Sender);
   Serial.print(" -> Button #");
