@@ -7,11 +7,11 @@ BluetoothLib::BluetoothLib(){
 void BluetoothLib::SetUp(){
   pinMode(4, OUTPUT);
   digitalWrite(4, HIGH);
-  Serial1.begin(38400);
+  Serial2.begin(38400);
 
   Serial.println("Setting up bluetooth module");
-  Serial1.write("AT+ORGL\r\n");
-  Serial1.write("AT+RESET\r\n");
+  Serial2.write("AT+ORGL\r\n");
+  Serial2.write("AT+RESET\r\n");
   
   int step = 0;
 
@@ -19,7 +19,7 @@ void BluetoothLib::SetUp(){
     switch(step){
       case 0://Confirms connected to HC-05
         Serial.println("Sending connection check");
-        Serial1.write("AT\r\n");
+        Serial2.write("AT\r\n");
         delay(1000);
         if(MessageCheck()){
           step = 1;
@@ -28,7 +28,7 @@ void BluetoothLib::SetUp(){
 
       case 1://sets name of bluetooth module
         Serial.println("Sending rename command");
-        Serial1.write("AT+NAME=BT-LDN142\r\n");
+        Serial2.write("AT+NAME=BT-LDN142\r\n");
         delay(1000);
         if(MessageCheck()){
           step = 2;
@@ -37,7 +37,7 @@ void BluetoothLib::SetUp(){
 
       case 2://sets role as master
         Serial.println("Sending role command");
-        Serial1.write("AT+ROLE=1\r\n");
+        Serial2.write("AT+ROLE=1\r\n");
         delay(1000);
         if(MessageCheck()){
           step = 3;
@@ -46,7 +46,7 @@ void BluetoothLib::SetUp(){
 
       case 3://set to connect to specifc address only
       Serial.println("Sending mode command");
-        Serial1.write("AT+CMODE=0\r\n");
+        Serial2.write("AT+CMODE=0\r\n");
         delay(1000);
         if(MessageCheck()){
           step = 4;
@@ -55,34 +55,22 @@ void BluetoothLib::SetUp(){
 
       case 4://binds to slave address
         Serial.println("Sending bind command");
-        //Serial1.write("AT+BIND=0022,12,021BFB\r\n");
-        Serial1.write("AT+BIND=98d3,31,F6F3DF\r\n");
+        Serial2.write("AT+BIND=0022,12,021BFB\r\n");
+        // Serial2.write("AT+BIND=98d3,31,F6F3DF\r\n");
         delay(1000);
         if(MessageCheck()){
           step = 5;
         }
         break;
 
-      case 5://sets baud rate to 9600
-      Serial.println("Sending uart command");
-        Serial1.write("AT+UART=9600,0,0\r\n");
-        delay(1000);
-        Serial1.begin(9600);
-        if(MessageCheck()){
-          step = 6;
-        }
-        
-        break;
-
       default:
         Serial.println("Boot into data mode now");
-        
-        Serial1.begin(9600);
         //digitalWrite(4, LOW);
-        Serial1.write("AT+VERSION?\r\n");
+        Serial2.write("AT+VERSION?\r\n");
         delay(1000);
         
-        if(MessageCheck()){
+        if(Serial2.available()){
+          Serial.print(Serial2.read());
           //return;
         }
         break;
@@ -93,12 +81,14 @@ void BluetoothLib::SetUp(){
 void BluetoothLib::Begin(){
   pinMode(4, OUTPUT);
   digitalWrite(4, LOW);
-  Serial1.begin(38400);
+  Serial2.begin(9600);
 }
 
 bool BluetoothLib::MessageCheck(){
-  while(Serial1.available()){
-    char c = Serial1.read();
+  while(Serial2.available()){
+    // Serial.print(Serial2.read(), HEX);
+    // Serial.println();
+    char c = Serial2.read();
     if(c == '\n'){
       Serial.println();
       return true;
@@ -109,8 +99,8 @@ bool BluetoothLib::MessageCheck(){
   }
   return false;
 
-  // if(Serial1.available()){
-  //   Serial.println(Serial1.read(), HEX);
+  // if(Serial2.available()){
+  //   Serial.println(Serial2.read(), HEX);
   //   return true;
   // }
 
@@ -147,10 +137,10 @@ void BluetoothLib::SendHB() {
 //   return (_Bluetoothbus.sendMessage(&sendframe) == MCP2515::ERROR_OK);
 // }
 
-void BluetoothLib::PrintLS() {//LED Status unfinished
+void BluetoothLib::PrintLEDStatus() {//LED Status unfinished
 
 }
-void BluetoothLib::PrintT(const uint16_t& Temp1, const uint16_t& Temp2) {
+void BluetoothLib::PrintTemperature(const uint16_t& Temp1, const uint16_t& Temp2) {
   Serial.print("Recieved message from Bluetooth node -> ");
   Serial.print("Temperature at sensor 1: ");
   Serial.print(Temp1);
@@ -158,7 +148,7 @@ void BluetoothLib::PrintT(const uint16_t& Temp1, const uint16_t& Temp2) {
   Serial.print(Temp2);
   Serial.println();
 }
-void BluetoothLib::PrintHB(const uint16_t& Heartbeats) {
+void BluetoothLib::PrintHeartbeat(const uint16_t& Heartbeats) {
   Serial.print("Recieved message from Bluetooth node -> ");
   Serial.print("Heartbeat #");
   Serial.print(Heartbeats);

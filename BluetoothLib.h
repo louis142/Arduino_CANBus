@@ -3,17 +3,6 @@
 
 #include <Arduino.h>
 
-// enum CAN_ID {
-//   BUTTON_PRESS    = 0x10,
-//   LED_STATUS      = 0x20,
-//   FAN_SPEED       = 0x30,
-//   TEMPERATURE     = 0x40,
-//   HEARTBEAT       = 0xF0,
-//   SET_LED         = 0x21,
-//   SET_MULT_LED    = 0x22,
-//   SET_FAN         = 0x31
-// };
-
 class BluetoothLib {
   private:
     uint16_t hbCount;
@@ -26,8 +15,8 @@ class BluetoothLib {
     void SetLED();
     void SendHB();
 
-    void PrintLS();
-    void PrintT(const uint16_t& Temp1, const uint16_t& Temp2);
-    void PrintHB(const uint16_t& Heartbeats);
+    void PrintLEDStatus();
+    void PrintTemperature(const uint16_t& Temp1, const uint16_t& Temp2);
+    void PrintHeartbeat(const uint16_t& Heartbeats);
 };
 #endif

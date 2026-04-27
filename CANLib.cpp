@@ -1,6 +1,6 @@
 #include "CANLib.h"
 
-CANLib::CANLib(MCP2515& canbus) : _canbus(canbus) {}
+CANLib::CANLib(MCP2515& canbus, CANSensorNode& node1) : _canbus(canbus) , node1Data(&node1) {}
 
 void CANLib::SetLED(const int& Target, const int& LED, const bool& Status) {
   struct can_frame canSend;
@@ -90,64 +90,95 @@ bool CANLib::_send(const struct can_frame& sendframe) {
   return (_canbus.sendMessage(&sendframe) == MCP2515::ERROR_OK);
 }
 
-void CANLib::MessageCheck(struct can_frame& canRecv) {
+// Serial.print("Received CAN ");
+// Serial.print(canRecv.can_id, HEX);
+// Serial.print(" -> data ");
+// Serial.print(canRecv.data[0]);
+// Serial.print(" ");
+// Serial.print(canRecv.data[1]);
+// Serial.print(" ");
+// Serial.print(canRecv.data[2]);
+// Serial.print(" ");
+// Serial.print(canRecv.data[3]);
+// Serial.print(" ");
+// Serial.print(canRecv.data[4]);
+// Serial.print(" ");
+// Serial.print(canRecv.data[5]);
+// Serial.print(" ");
+// Serial.print(canRecv.data[6]);
+// Serial.print(" ");
+// Serial.print(canRecv.data[7]);
+// Serial.println();
+void CANLib::MessageCheck() {
+  struct can_frame canRecv;
+  
   if (_canbus.readMessage(&canRecv) == MCP2515::ERROR_OK) {
-    // Serial.print("Received CAN ");
-    // Serial.print(canRecv.can_id, HEX);
-    // Serial.print(" -> data ");
-    // Serial.print(canRecv.data[0]);
-    // Serial.print(" ");
-    // Serial.print(canRecv.data[1]);
-    // Serial.print(" ");
-    // Serial.print(canRecv.data[2]);
-    // Serial.print(" ");
-    // Serial.print(canRecv.data[3]);
-    // Serial.print(" ");
-    // Serial.print(canRecv.data[4]);
-    // Serial.print(" ");
-    // Serial.print(canRecv.data[5]);
-    // Serial.print(" ");
-    // Serial.print(canRecv.data[6]);
-    // Serial.print(" ");
-    // Serial.print(canRecv.data[7]);
-    // Serial.println();
     int sender = canRecv.data[0];
+    
     switch (canRecv.can_id) {
       case CAN_ID::BUTTON_PRESS:
         {
           int buttonID = canRecv.data[1];
-          PrintBP(sender, buttonID);
+          PrintButtonPress(sender, buttonID);
+          if(node1Data->LastButton != buttonID && node1Data->NodeId == 1){
+            node1Data->LastButton = buttonID;
+            node1Data->update = true;
+          }
           break;
         }
       case CAN_ID::LED_STATUS:
         {
-          Serial.println("MULT LED STATUS!");
+          bool LEDStatusBank[7];
+          uint8_t bank = 0;
+          for(int i = 0; i < 7; i++){
+            if(canRecv.data[i+1] == 0x01){
+              LEDStatusBank[i] = true;
+              bank |= (1<<i);
+            }
+          }
+          if(node1Data->LEDBank != bank && node1Data->NodeId == 1){
+            node1Data->LEDBank = bank;
+            node1Data->update = true;
+          }
+          PrintLEDStatus(sender, LEDStatusBank);
           break;
         }
       case CAN_ID::TEMPERATURE:
         {
           uint16_t combinedtemp1 = (uint16_t)canRecv.data[1] << 8 | canRecv.data[2];
           uint16_t combinedtemp2 = (uint16_t)canRecv.data[3] << 8 | canRecv.data[4];
-          PrintT(sender, combinedtemp1, combinedtemp2);
+          PrintTemperature(sender, combinedtemp1, combinedtemp2);
+          if((node1Data->Temp1 != combinedtemp1 || node1Data->Temp2 != combinedtemp2) && node1Data->NodeId == 1){
+            node1Data->Temp1 = combinedtemp1;
+            node1Data->Temp2 = combinedtemp2;
+            node1Data->update = true;
+          }
           break;
         }
       case CAN_ID::FAN_SPEED:
         {
           uint16_t combinedfanrpm = (uint16_t)canRecv.data[1] << 8 | canRecv.data[2];
-          PrintFS(sender, combinedfanrpm);
+          PrintFanSpeed(sender, combinedfanrpm);
+          if(node1Data->FanSpeed != combinedfanrpm && node1Data->NodeId == 1){
+            node1Data->FanSpeed = combinedfanrpm;
+            node1Data->update = true;
+          }
           break;
         }
       case CAN_ID::HEARTBEAT:
         {
           uint16_t combined = (uint16_t)canRecv.data[1] << 8 | canRecv.data[2];
-          PrintHB(sender, combined);
+          PrintHeartbeat(sender, combined);          
+          if(node1Data->Heartbeat != combined && node1Data->NodeId == 1){
+            node1Data->Heartbeat = combined;
+          }
           break;
         }
     }
   }
 }
 
-void CANLib::PrintBP(const int& Sender, const int& Button) {
+void CANLib::PrintButtonPress(const int& Sender, const int& Button) {
   Serial.print("Recieved CAN from node #");
   Serial.print(Sender);
   Serial.print(" -> Button #");
@@ -155,22 +186,25 @@ void CANLib::PrintBP(const int& Sender, const int& Button) {
   Serial.print(" has been pressed");
   Serial.println();
 }
-void CANLib::PrintLS(const int& Sender, const int& Button){ 
+void CANLib::PrintLEDStatus(const int& Sender, const bool LEDStatus[7]){ 
   Serial.print("Recieved CAN from node #");
   Serial.print(Sender);
-  Serial.print(" -> Button #");
-  Serial.print(Button);
-  Serial.print(" has been pressed");
+  Serial.print(" -> ");
+  for(int i = 0; i < 7; i++){
+    Serial.print("LED #");
+    Serial.print(i);
+    Serial.print(LEDStatus[i] ? ":ON " : ":OFF ");
+  }
   Serial.println();
 }
-void CANLib::PrintFS(const int& Sender, const uint16_t& FanSpeed) {
+void CANLib::PrintFanSpeed(const int& Sender, const uint16_t& FanSpeed) {
   Serial.print("Recieved CAN from node #");
   Serial.print(Sender);
   Serial.print(" -> Fan Speed: ");
   Serial.print(FanSpeed);
   Serial.println();
 }
-void CANLib::PrintT(const int& Sender, const uint16_t& Temp1, const uint16_t& Temp2) {
+void CANLib::PrintTemperature(const int& Sender, const uint16_t& Temp1, const uint16_t& Temp2) {
   Serial.print("Recieved CAN from node #");
   Serial.print(Sender);
   Serial.print(" -> Temperature at sensor 1: ");
@@ -179,7 +213,7 @@ void CANLib::PrintT(const int& Sender, const uint16_t& Temp1, const uint16_t& Te
   Serial.print(Temp2);
   Serial.println();
 }
-void CANLib::PrintHB(const int& Sender, const uint16_t& Heartbeats) {
+void CANLib::PrintHeartbeat(const int& Sender, const uint16_t& Heartbeats) {
   Serial.print("Recieved CAN from node #");
   Serial.print(Sender);
   Serial.print(" -> Heartbeat #");
